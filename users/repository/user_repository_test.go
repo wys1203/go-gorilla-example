@@ -65,3 +65,44 @@ func (suite *RepositorySuite) TestGetAll() {
 
 	assert.Equal(suite.T(), expectedUsers, users)
 }
+
+func (suite *RepositorySuite) TestSearchByFullname() {
+	rows := sqlmock.NewRows([]string{"acct", "pwd", "fullname", "created_at", "updated_at"})
+	timeLayout := "2006-01-02T15:04:05Z"
+	createdAt, _ := time.Parse(timeLayout, "2023-05-06T15:04:05Z")
+	updatedAt, _ := time.Parse(timeLayout, "2023-05-06T15:04:05Z")
+
+	rows.
+		AddRow("acctid-1", "password1", "John Doe", createdAt, updatedAt).
+		AddRow("acctid-2", "password2", "Jane Doe", createdAt, updatedAt)
+
+	suite.mock.ExpectQuery("SELECT (.+) FROM \"users\" WHERE fullname LIKE (.+)").
+		WithArgs("%Doe%").
+		WillReturnRows(rows)
+
+	userRepo := repository.NewUserRepository(suite.DB)
+
+	users, err := userRepo.SearchByFullname("Doe")
+	assert.NoError(suite.T(), err)
+	assert.Len(suite.T(), users, 2)
+
+	expectedUsers := []entity.User{
+		{
+			Acct:     "acctid-1",
+			Pwd:      "password1",
+			FullName: "John Doe",
+		},
+		{
+			Acct:     "acctid-2",
+			Pwd:      "password2",
+			FullName: "Jane Doe",
+		},
+	}
+
+	for i, user := range users {
+		assert.Equal(suite.T(), expectedUsers[i].Acct, user.Acct)
+		assert.Equal(suite.T(), expectedUsers[i].Pwd, user.Pwd)
+		assert.Equal(suite.T(), expectedUsers[i].FullName, user.FullName)
+	}
+
+}

@@ -28,6 +28,20 @@ func (h *userHandler) GetAllUsers(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(users)
 }
 
+func (h *userHandler) SearchUsers(w http.ResponseWriter, r *http.Request) {
+	fullname := r.URL.Query().Get("fullname")
+
+	users, err := h.userUsecase.SearchUsers(fullname)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(users)
+}
+
 func RegisterUserRoutes(router *mux.Router, h *userHandler) {
 	router.HandleFunc("/users", h.GetAllUsers).Methods(http.MethodGet)
+	router.HandleFunc("/users/search", h.SearchUsers).Methods(http.MethodGet)
 }

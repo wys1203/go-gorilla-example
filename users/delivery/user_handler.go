@@ -6,6 +6,7 @@ import (
 
 	"github.com/gorilla/mux"
 
+	"github.com/wys1203/go-gorilla-example/users/entity"
 	"github.com/wys1203/go-gorilla-example/users/usecase"
 )
 
@@ -55,8 +56,28 @@ func (h *userHandler) getUserDetails(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(user)
 }
 
+func (h *userHandler) signUp(w http.ResponseWriter, r *http.Request) {
+	var user entity.User
+	err := json.NewDecoder(r.Body).Decode(&user)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	createdUser, err := h.userUsecase.CreateUser(&user)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(createdUser)
+}
+
 func RegisterUserRoutes(router *mux.Router, h *userHandler) {
 	router.HandleFunc("/users", h.GetAllUsers).Methods(http.MethodGet)
 	router.HandleFunc("/users/search", h.SearchUsers).Methods(http.MethodGet)
 	router.HandleFunc("/users/{acct}", h.getUserDetails).Methods(http.MethodGet)
+	router.HandleFunc("/signup", h.signUp).Methods(http.MethodPost)
 }

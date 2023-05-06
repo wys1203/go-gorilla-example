@@ -13,6 +13,7 @@ type UserRepository interface {
 	GetAll() ([]entity.User, error)
 	SearchByFullname(fullname string) ([]entity.User, error)
 	GetByAcct(acct string) (*entity.User, error)
+	Create(user *entity.User) (*entity.User, error)
 }
 
 type UserRepositoryImpl struct {
@@ -52,4 +53,12 @@ func (r *UserRepositoryImpl) GetByAcct(acct string) (*entity.User, error) {
 	}
 
 	return &user, nil
+}
+
+func (r *UserRepositoryImpl) Create(user *entity.User) (*entity.User, error) {
+	err := r.db.Create(&user).Error
+	if err != nil {
+		return nil, err
+	}
+	return user, nil
 }

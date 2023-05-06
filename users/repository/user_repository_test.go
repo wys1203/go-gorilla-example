@@ -59,8 +59,8 @@ func (suite *RepositorySuite) TestGetAll() {
 	assert.NoError(suite.T(), err)
 
 	expectedUsers := []entity.User{
-		{Acct: "acctid-1", Pwd: "password1", FullName: "User One", CreatedAt: createdAt, UpdatedAt: updatedAt},
-		{Acct: "acctid-2", Pwd: "password2", FullName: "User Two", CreatedAt: createdAt, UpdatedAt: updatedAt},
+		{Acct: "acctid-1", Pwd: "password1", FullName: "User One", CreatedAt: &createdAt, UpdatedAt: &updatedAt},
+		{Acct: "acctid-2", Pwd: "password2", FullName: "User Two", CreatedAt: &createdAt, UpdatedAt: &updatedAt},
 	}
 
 	assert.Equal(suite.T(), expectedUsers, users)

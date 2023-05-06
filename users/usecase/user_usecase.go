@@ -9,6 +9,7 @@ type UserUsecase interface {
 	GetAllUsers() ([]entity.User, error)
 	SearchUsers(fullname string) ([]entity.User, error)
 	GetUserByAcct(acct string) (*entity.User, error)
+	CreateUser(user *entity.User) (*entity.User, error)
 }
 
 type UserUsecaseImpl struct {
@@ -33,4 +34,8 @@ func (u *UserUsecaseImpl) SearchUsers(fullname string) ([]entity.User, error) {
 
 func (u *UserUsecaseImpl) GetUserByAcct(acct string) (*entity.User, error) {
 	return u.userRepo.GetByAcct(acct)
+}
+
+func (u *UserUsecaseImpl) CreateUser(user *entity.User) (*entity.User, error) {
+	return u.userRepo.Create(user)
 }

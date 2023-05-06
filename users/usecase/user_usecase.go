@@ -8,6 +8,7 @@ import (
 type UserUsecase interface {
 	GetAllUsers() ([]entity.User, error)
 	SearchUsers(fullname string) ([]entity.User, error)
+	GetUserByAcct(acct string) (*entity.User, error)
 }
 
 type UserUsecaseImpl struct {
@@ -28,4 +29,8 @@ func (u *UserUsecaseImpl) GetAllUsers() ([]entity.User, error) {
 
 func (u *UserUsecaseImpl) SearchUsers(fullname string) ([]entity.User, error) {
 	return u.userRepo.SearchByFullname(fullname)
+}
+
+func (u *UserUsecaseImpl) GetUserByAcct(acct string) (*entity.User, error) {
+	return u.userRepo.GetByAcct(acct)
 }

@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"errors"
 	"fmt"
 
 	"gorm.io/gorm"
@@ -11,6 +12,7 @@ import (
 type UserRepository interface {
 	GetAll() ([]entity.User, error)
 	SearchByFullname(fullname string) ([]entity.User, error)
+	GetByAcct(acct string) (*entity.User, error)
 }
 
 type UserRepositoryImpl struct {
@@ -34,4 +36,20 @@ func (r *UserRepositoryImpl) SearchByFullname(fullname string) ([]entity.User, e
 		return nil, err
 	}
 	return users, nil
+}
+
+func (r *UserRepositoryImpl) GetByAcct(acct string) (*entity.User, error) {
+	var user entity.User
+
+	// Use the GORM library to search for a user with a matching account ID
+	err := r.db.Where("acct = ?", acct).First(&user).Error
+
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, fmt.Errorf("user not found")
+		}
+		return nil, err
+	}
+
+	return &user, nil
 }

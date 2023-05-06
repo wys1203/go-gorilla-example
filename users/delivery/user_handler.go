@@ -41,7 +41,22 @@ func (h *userHandler) SearchUsers(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(users)
 }
 
+func (h *userHandler) getUserDetails(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	acct := vars["acct"]
+
+	user, err := h.userUsecase.GetUserByAcct(acct)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusNotFound)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(user)
+}
+
 func RegisterUserRoutes(router *mux.Router, h *userHandler) {
 	router.HandleFunc("/users", h.GetAllUsers).Methods(http.MethodGet)
 	router.HandleFunc("/users/search", h.SearchUsers).Methods(http.MethodGet)
+	router.HandleFunc("/users/{acct}", h.getUserDetails).Methods(http.MethodGet)
 }

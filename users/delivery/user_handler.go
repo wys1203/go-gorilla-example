@@ -75,9 +75,34 @@ func (h *userHandler) signUp(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(createdUser)
 }
 
+func (h *userHandler) signIn(w http.ResponseWriter, r *http.Request) {
+	var creds struct {
+		Acct string `json:"acct"`
+		Pwd  string `json:"pwd"`
+	}
+
+	err := json.NewDecoder(r.Body).Decode(&creds)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	token, err := h.userUsecase.Login(creds.Acct, creds.Pwd)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{
+		"token": token,
+	})
+}
+
 func RegisterUserRoutes(router *mux.Router, h *userHandler) {
 	router.HandleFunc("/users", h.GetAllUsers).Methods(http.MethodGet)
 	router.HandleFunc("/users/search", h.SearchUsers).Methods(http.MethodGet)
 	router.HandleFunc("/users/{acct}", h.getUserDetails).Methods(http.MethodGet)
 	router.HandleFunc("/signup", h.signUp).Methods(http.MethodPost)
+	router.HandleFunc("/signin", h.signIn).Methods(http.MethodPost)
 }

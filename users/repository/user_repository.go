@@ -15,6 +15,7 @@ type UserRepository interface {
 	GetByAcct(acct string) (*entity.User, error)
 	Create(user *entity.User) (*entity.User, error)
 	Delete(acct string) error
+	Update(acct string, user entity.User) error
 }
 
 type UserRepositoryImpl struct {
@@ -66,4 +67,10 @@ func (r *UserRepositoryImpl) Create(user *entity.User) (*entity.User, error) {
 
 func (r *UserRepositoryImpl) Delete(acct string) error {
 	return r.db.Delete(&entity.User{}, "acct = ?", acct).Error
+}
+
+func (r *UserRepositoryImpl) Update(acct string, user entity.User) error {
+	stmt := `UPDATE users SET pwd = $1, fullname = $2, updated_at = now() WHERE acct = $3`
+	err := r.db.Exec(stmt, user.Pwd, user.FullName, acct).Error
+	return err
 }

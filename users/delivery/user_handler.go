@@ -112,11 +112,32 @@ func (h *userHandler) deleteUser(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+func (h *userHandler) updateUser(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	acct := vars["acct"]
+
+	var user entity.User
+	err := json.NewDecoder(r.Body).Decode(&user)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	err = h.userUsecase.Update(acct, user)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+}
+
 func RegisterUserRoutes(router *mux.Router, h *userHandler) {
 	router.HandleFunc("/users", h.GetAllUsers).Methods(http.MethodGet)
 	router.HandleFunc("/users/search", h.SearchUsers).Methods(http.MethodGet)
 	router.HandleFunc("/users/{acct}", h.getUserDetails).Methods(http.MethodGet)
 	router.HandleFunc("/users/{acct}", h.deleteUser).Methods(http.MethodDelete)
+	router.HandleFunc("/users/{acct}", h.updateUser).Methods(http.MethodPut)
 	router.HandleFunc("/signup", h.signUp).Methods(http.MethodPost)
 	router.HandleFunc("/signin", h.signIn).Methods(http.MethodPost)
 }

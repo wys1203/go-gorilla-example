@@ -134,7 +134,30 @@ func (h *userHandler) updateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.WriteHeader(http.StatusOK)
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h *userHandler) updateUserFullname(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	acct := vars["acct"]
+
+	var req struct {
+		Fullname string `json:"fullname"`
+	}
+
+	err := json.NewDecoder(r.Body).Decode(&req)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	err = h.userUsecase.UpdateFullname(acct, req.Fullname)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func RegisterUserRoutes(router *mux.Router, h *userHandler) {
@@ -142,7 +165,8 @@ func RegisterUserRoutes(router *mux.Router, h *userHandler) {
 	router.HandleFunc("/users/search", h.SearchUsers).Methods(http.MethodGet)
 	router.HandleFunc("/users/{acct}", h.getUserDetails).Methods(http.MethodGet)
 	router.HandleFunc("/users/{acct}", h.deleteUser).Methods(http.MethodDelete)
-	router.HandleFunc("/users/{acct}", h.updateUser).Methods(http.MethodPut)
+	router.HandleFunc("/users/{acct}", h.updateUser).Methods(http.MethodPatch)
+	router.HandleFunc("/users/{acct}/fullname", h.updateUserFullname).Methods(http.MethodPut)
 	router.HandleFunc("/signup", h.signUp).Methods(http.MethodPost)
 	router.HandleFunc("/signin", h.signIn).Methods(http.MethodPost)
 }

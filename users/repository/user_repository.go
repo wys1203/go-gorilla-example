@@ -16,6 +16,7 @@ type UserRepository interface {
 	Create(user *entity.User) (*entity.User, error)
 	Delete(acct string) error
 	Update(acct string, user entity.User) error
+	UpdateFullname(acct string, fullname string) error
 }
 
 type UserRepositoryImpl struct {
@@ -91,7 +92,29 @@ func (r *UserRepositoryImpl) Delete(acct string) error {
 }
 
 func (r *UserRepositoryImpl) Update(acct string, user entity.User) error {
-	stmt := `UPDATE users SET pwd = $1, fullname = $2, updated_at = now() WHERE acct = $3`
-	err := r.db.Exec(stmt, user.Pwd, user.FullName, acct).Error
-	return err
+	// Update attributes with `struct`, will only update non-zero fields
+	res := r.db.Model(&entity.User{}).Where("acct = ?", acct).Updates(user)
+
+	if res.Error != nil {
+		return res.Error
+	}
+
+	if res.RowsAffected == 0 {
+		return fmt.Errorf("user not found")
+	}
+
+	return nil
+}
+
+func (r *UserRepositoryImpl) UpdateFullname(acct string, fullname string) error {
+	res := r.db.Model(&entity.User{}).Where("acct = ?", acct).Update("fullname", fullname)
+	if res.Error != nil {
+		return res.Error
+	}
+
+	if res.RowsAffected == 0 {
+		return fmt.Errorf("user not found")
+	}
+
+	return nil
 }

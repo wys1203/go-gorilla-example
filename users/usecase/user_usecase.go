@@ -20,6 +20,7 @@ type UserUsecase interface {
 	Login(acct, pwd string) (string, error)
 	Delete(acct string) error
 	Update(acct string, user entity.User) error
+	UpdateFullname(acct string, fullname string) error
 }
 
 type UserUsecaseImpl struct {
@@ -86,4 +87,8 @@ func (u *UserUsecaseImpl) Delete(acct string) error {
 
 func (u *UserUsecaseImpl) Update(acct string, user entity.User) error {
 	return u.userRepo.Update(acct, user)
+}
+
+func (u *UserUsecaseImpl) UpdateFullname(acct string, fullname string) error {
+	return u.userRepo.UpdateFullname(acct, fullname)
 }

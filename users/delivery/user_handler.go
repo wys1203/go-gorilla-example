@@ -2,21 +2,38 @@ package delivery
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 	"strconv"
+	"sync"
 
 	"github.com/gorilla/mux"
+	"github.com/gorilla/websocket"
 
 	"github.com/wys1203/go-gorilla-example/users/entity"
 	"github.com/wys1203/go-gorilla-example/users/usecase"
 )
 
+var upgrader = websocket.Upgrader{
+	ReadBufferSize:  1024,
+	WriteBufferSize: 1024,
+	CheckOrigin: func(r *http.Request) bool {
+		return true
+	},
+}
+
 type userHandler struct {
 	userUsecase usecase.UserUsecase
+
+	clients     map[*websocket.Conn]bool
+	clientsLock sync.Mutex
 }
 
 func NewUserHandler(userUsecase usecase.UserUsecase) *userHandler {
-	return &userHandler{userUsecase: userUsecase}
+	return &userHandler{
+		userUsecase: userUsecase,
+		clients:     make(map[*websocket.Conn]bool),
+	}
 }
 
 func (h *userHandler) GetAllUsers(w http.ResponseWriter, r *http.Request) {
@@ -94,6 +111,7 @@ func (h *userHandler) signIn(w http.ResponseWriter, r *http.Request) {
 
 	token, err := h.userUsecase.Login(creds.Acct, creds.Pwd)
 	if err != nil {
+		h.broadcastFailedSignIn(creds.Acct)
 		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
 	}
@@ -160,9 +178,72 @@ func (h *userHandler) updateUserFullname(w http.ResponseWriter, r *http.Request)
 	w.WriteHeader(http.StatusNoContent)
 }
 
+func (h *userHandler) wsHandler(w http.ResponseWriter, r *http.Request) {
+	conn, err := upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		log.Println("Failed to upgrade connection:", err)
+		return
+	}
+	defer func() {
+		conn.Close()
+		h.removeClient(conn)
+	}()
+
+	h.addClient(conn)
+	for {
+		_, msg, err := conn.ReadMessage()
+		if err != nil {
+			log.Println("Failed to read message:", err)
+			break
+		}
+		log.Printf("Received message: %s\n", msg)
+	}
+}
+
+func (h *userHandler) addClient(conn *websocket.Conn) {
+	h.clientsLock.Lock()
+	defer h.clientsLock.Unlock()
+	h.clients[conn] = true
+}
+
+func (h *userHandler) removeClient(conn *websocket.Conn) {
+	h.clientsLock.Lock()
+	defer h.clientsLock.Unlock()
+	delete(h.clients, conn)
+}
+
+func (h *userHandler) broadcastFailedSignIn(acct string) {
+	h.clientsLock.Lock()
+	defer h.clientsLock.Unlock()
+
+	message := struct {
+		Type string `json:"type"`
+		Acct string `json:"acct"`
+	}{
+		Type: "failed_sign_in",
+		Acct: acct,
+	}
+
+	msg, err := json.Marshal(message)
+	if err != nil {
+		log.Println("Failed to marshal message:", err)
+		return
+	}
+
+	for client := range h.clients {
+		err := client.WriteMessage(websocket.TextMessage, msg)
+		if err != nil {
+			log.Println("Failed to send message to client:", err)
+			client.Close()
+			delete(h.clients, client)
+		}
+	}
+}
+
 func (h *userHandler) RegisterUserRoutes(router *mux.Router) {
 	router.HandleFunc("/signup", h.signUp).Methods(http.MethodPost)
 	router.HandleFunc("/signin", h.signIn).Methods(http.MethodPost)
+	router.HandleFunc("/ws", h.wsHandler).Methods(http.MethodGet)
 
 	protectedRouter := router.PathPrefix("/users").Subrouter()
 	protectedRouter.Use(JWTAuthenticationMiddleware)

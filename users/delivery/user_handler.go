@@ -10,6 +10,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/gorilla/websocket"
 
+	"github.com/wys1203/go-gorilla-example/errors"
 	"github.com/wys1203/go-gorilla-example/users/entity"
 	"github.com/wys1203/go-gorilla-example/users/usecase"
 )
@@ -43,7 +44,10 @@ func (h *userHandler) GetAllUsers(w http.ResponseWriter, r *http.Request) {
 	order := r.URL.Query().Get("order")
 	users, err := h.userUsecase.GetAll(page, size, sortBy, order)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		errors.JSONHandleError(
+			w,
+			errors.NewErrorWrapper(http.StatusInternalServerError, err, err.Error()),
+		)
 		return
 	}
 
@@ -56,7 +60,10 @@ func (h *userHandler) SearchUsers(w http.ResponseWriter, r *http.Request) {
 
 	users, err := h.userUsecase.SearchUsers(fullname)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		errors.JSONHandleError(
+			w,
+			errors.NewErrorWrapper(http.StatusInternalServerError, err, err.Error()),
+		)
 		return
 	}
 
@@ -70,7 +77,10 @@ func (h *userHandler) getUserDetails(w http.ResponseWriter, r *http.Request) {
 
 	user, err := h.userUsecase.GetUserByAcct(acct)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusNotFound)
+		errors.JSONHandleError(
+			w,
+			errors.NewErrorWrapper(http.StatusNotFound, err, err.Error()),
+		)
 		return
 	}
 
@@ -80,15 +90,20 @@ func (h *userHandler) getUserDetails(w http.ResponseWriter, r *http.Request) {
 
 func (h *userHandler) signUp(w http.ResponseWriter, r *http.Request) {
 	var user entity.User
-	err := json.NewDecoder(r.Body).Decode(&user)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+	if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
+		errors.JSONHandleError(w, errors.NewErrorWrapper(http.StatusBadRequest, err, err.Error()))
 		return
 	}
 
+	// TODO: validate user data
+	// ...
+
 	createdUser, err := h.userUsecase.CreateUser(&user)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		errors.JSONHandleError(
+			w,
+			errors.NewErrorWrapper(http.StatusInternalServerError, err, err.Error()),
+		)
 		return
 	}
 
@@ -103,16 +118,15 @@ func (h *userHandler) signIn(w http.ResponseWriter, r *http.Request) {
 		Pwd  string `json:"pwd"`
 	}
 
-	err := json.NewDecoder(r.Body).Decode(&creds)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+	if err := json.NewDecoder(r.Body).Decode(&creds); err != nil {
+		errors.JSONHandleError(w, errors.NewErrorWrapper(http.StatusBadRequest, err, err.Error()))
 		return
 	}
 
 	token, err := h.userUsecase.Login(creds.Acct, creds.Pwd)
 	if err != nil {
 		h.broadcastFailedSignIn(creds.Acct)
-		http.Error(w, err.Error(), http.StatusUnauthorized)
+		errors.JSONHandleError(w, errors.NewErrorWrapper(http.StatusUnauthorized, err, err.Error()))
 		return
 	}
 
@@ -128,7 +142,10 @@ func (h *userHandler) deleteUser(w http.ResponseWriter, r *http.Request) {
 
 	err := h.userUsecase.Delete(acct)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		errors.JSONHandleError(
+			w,
+			errors.NewErrorWrapper(http.StatusInternalServerError, err, err.Error()),
+		)
 		return
 	}
 
@@ -142,13 +159,16 @@ func (h *userHandler) updateUser(w http.ResponseWriter, r *http.Request) {
 	var user entity.User
 	err := json.NewDecoder(r.Body).Decode(&user)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		errors.JSONHandleError(w, errors.NewErrorWrapper(http.StatusBadRequest, err, err.Error()))
 		return
 	}
 
 	err = h.userUsecase.Update(acct, user)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		errors.JSONHandleError(
+			w,
+			errors.NewErrorWrapper(http.StatusInternalServerError, err, err.Error()),
+		)
 		return
 	}
 
@@ -165,13 +185,13 @@ func (h *userHandler) updateUserFullname(w http.ResponseWriter, r *http.Request)
 
 	err := json.NewDecoder(r.Body).Decode(&req)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		errors.JSONHandleError(w, errors.NewErrorWrapper(http.StatusBadRequest, err, err.Error()))
 		return
 	}
 
 	err = h.userUsecase.UpdateFullname(acct, req.Fullname)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		errors.JSONHandleError(w, errors.NewErrorWrapper(http.StatusInternalServerError, err, err.Error()))
 		return
 	}
 

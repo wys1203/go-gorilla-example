@@ -1,0 +1,333 @@
+openapi: 3.0.2
+
+info:
+  title: gorilla demo - A users service
+  version: "1.0"
+
+servers:
+  - url: http://localhost:8080
+
+tags:
+  - name: Users
+    description: A users operation API interface.
+  - name: Authentication
+    description: A authentication operation API interface.
+
+paths:
+  /users:
+    get:
+      security:
+        - BearerAuth: []
+      tags:
+          - Users
+      summary: Get all users.
+      description: Get all users.
+      operationId: getAllUsers
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            format: int32
+            example: 1
+          description: The number of pages to skip before starting to collect the result set.
+        - in: query
+          name: size
+          schema:
+            type: integer
+            format: int32
+            example: 10
+          description: The numbers of items to return.
+        - in: query
+          name: sortBy
+          schema:
+            type: string
+            description: The sorting rules.
+            example: created_at
+        - in: query
+          name: order
+          schema:
+            type: string
+            enum: [asc, desc]
+            description: The sorting order.
+            example: asc
+      responses:
+        "500":
+          $ref: "#/components/responses/Default"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Users"
+  /users/{acct}:
+    parameters:
+      - $ref: "#/components/parameters/Account"
+    get:
+      security:
+        - BearerAuth: []
+      tags:
+        - Users
+      summary: Get a user by account.
+      description: Get a user by account.
+      operationId: getUser
+      responses:
+        "500":
+          $ref: "#/components/responses/Default"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+    delete:
+      security:
+        - BearerAuth: []
+      tags:
+        - Users
+      summary: Delete a user by account.
+      description: Delete a user by account.
+      operationId: deleteUser
+      responses:
+        "500":
+          $ref: "#/components/responses/Default"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "204":
+          description: No Content
+    patch:
+      security:
+        - BearerAuth: []
+      tags:
+        - Users
+      summary: Update a user by account.
+      description: Update a user by account.
+      operationId: updateUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - "fullname"
+              properties:
+                fullname:
+                  type: string
+                pwd:
+                  type: string
+      responses:
+        "500":
+          $ref: "#/components/responses/Default"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "204":
+          description: No Content
+  /users/{acct}/fullname:
+    parameters:
+      - $ref: "#/components/parameters/Account"
+    put:
+      security:
+        - BearerAuth: []
+      tags:
+        - Users
+      summary: Update a user's fullname by account.
+      description: Update a user's fullname by account.
+      operationId: updateUserFullname
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - "fullname"
+              properties:
+                fullname:
+                  type: string
+      responses:
+        "500":
+          $ref: "#/components/responses/Default"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "204":
+          description: No Content
+  /signup:
+    post:
+      tags:
+        - Authentication
+      summary: Sign up a new user account.
+      operationId: signUp
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - "acct"
+                - "fullname"
+                - "pwd"
+              properties:
+                acct:
+                  type: string
+                fullname:
+                  type: string
+                pwd:
+                  type: string
+      responses:
+        "500":
+          $ref: "#/components/responses/Default"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+  /signin:
+    post:
+      tags:
+        - Authentication
+      summary: Sign in a user account.
+      description: Sign in a user account.
+      operationId: signIn
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              properties:
+                acct:
+                  type: string
+                pwd:
+                  type: string
+              required:
+                - "acct"
+                - "pwd"
+      responses:
+        "500":
+          $ref: "#/components/responses/Default"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Token"
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    Account:
+      in: path
+      name: acct
+      schema:
+        type: string
+      required: true
+      description: The account of the user.
+  responses:
+    Default:
+      description: Unexpected error.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    Unauthorized:
+      description: The request has not been applied because it lacks valid authentication credentials for the target resource.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    NotFound:
+      description: The specified resource was not found.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    BadRequest:
+      description: The specified request body invalid.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+  schemas:
+    Error:
+      type: object
+      required:
+        - message
+      properties:
+        message:
+          type: string
+    CommonProperties:
+      type: object
+      properties:
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    PaginationProperties:
+      type: object
+      properties:
+        page:
+          type: integer
+          format: int64
+          description: The number of pages to skip before starting to collect the result set.
+        size:
+          type: integer
+          format: int64
+          description: The numbers of items to return.
+        total:
+          type: integer
+          format: int64
+          description: The total number of items.
+    User:
+      allOf:
+        - $ref: "#/components/schemas/CommonProperties"
+        - type: object
+          required:
+            - "acct"
+            - "fullname"
+            - "pwd"
+          properties:
+            acct:
+              type: string
+            fullname:
+              type: string
+            pwd:
+              type: string
+    Users:
+      type: array
+      items:
+        $ref: "#/components/schemas/User"
+    Token:
+      type: object
+      required:
+        - "token"
+      properties:
+        token:
+          type: string

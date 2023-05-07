@@ -9,33 +9,35 @@ import (
 	"strings"
 
 	"github.com/golang-jwt/jwt"
+
+	"github.com/wys1203/go-gorilla-example/errors"
 )
 
 func JWTAuthenticationMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		authorizationHeader := r.Header.Get("Authorization")
 		if authorizationHeader == "" {
-			http.Error(w, "Authorization header is missing", http.StatusUnauthorized)
+			errors.JSONHandleError(w, errors.NewErrorWrapper(http.StatusUnauthorized, nil, "Authorization header is missing"))
 			return
 		}
 
 		bearerToken := strings.Split(authorizationHeader, " ")
 		if len(bearerToken) != 2 {
-			http.Error(w, "Invalid token format", http.StatusUnauthorized)
+			errors.JSONHandleError(w, errors.NewErrorWrapper(http.StatusUnauthorized, nil, "Invalid token format"))
 			return
 		}
 
 		tokenString := bearerToken[1]
 		pubKeyBytes, err := ioutil.ReadFile("public_key.pem")
 		if err != nil {
-			http.Error(w, "Error reading public key", http.StatusInternalServerError)
+			errors.JSONHandleError(w, errors.NewErrorWrapper(http.StatusInternalServerError, err, "Error reading public key"))
 			return
 		}
 
 		pubKeyPEM, _ := pem.Decode(pubKeyBytes)
 		publicKey, err := x509.ParsePKIXPublicKey(pubKeyPEM.Bytes)
 		if err != nil {
-			http.Error(w, "Error parsing public key", http.StatusInternalServerError)
+			errors.JSONHandleError(w, errors.NewErrorWrapper(http.StatusInternalServerError, err, "Error parsing public key"))
 			return
 		}
 
@@ -45,12 +47,12 @@ func JWTAuthenticationMiddleware(next http.Handler) http.Handler {
 		})
 
 		if err != nil {
-			http.Error(w, "Error parsing token", http.StatusUnauthorized)
+			errors.JSONHandleError(w, errors.NewErrorWrapper(http.StatusUnauthorized, err, "Error parsing token"))
 			return
 		}
 
 		if !token.Valid {
-			http.Error(w, "Invalid token", http.StatusUnauthorized)
+			errors.JSONHandleError(w, errors.NewErrorWrapper(http.StatusUnauthorized, err, "Invalid token"))
 			return
 		}
 

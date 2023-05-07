@@ -1,0 +1,27 @@
+version: "3.9"
+
+services:
+  app:
+    build: .
+    ports:
+      - "8080:8080"
+    depends_on:
+      - db
+    environment:
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_USER=ui_test
+      - DB_PASSWORD=mysecretpassword
+      - DB_NAME=ui_test
+
+  db:
+    image: "postgres:13-alpine"
+    environment:
+      - POSTGRES_USER=ui_test
+      - POSTGRES_PASSWORD=mysecretpassword
+      - POSTGRES_DB=ui_test
+    volumes:
+      - db_data:/var/lib/postgresql/data
+
+volumes:
+  db_data:

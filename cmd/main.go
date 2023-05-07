@@ -40,7 +40,7 @@ func main() {
 	userHandler := delivery.NewUserHandler(userUsecase)
 
 	router := mux.NewRouter()
-	delivery.RegisterUserRoutes(router, userHandler)
+	userHandler.RegisterUserRoutes(router)
 
 	server := &http.Server{
 		Addr:         ":8080",

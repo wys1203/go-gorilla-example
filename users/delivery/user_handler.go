@@ -160,13 +160,17 @@ func (h *userHandler) updateUserFullname(w http.ResponseWriter, r *http.Request)
 	w.WriteHeader(http.StatusNoContent)
 }
 
-func RegisterUserRoutes(router *mux.Router, h *userHandler) {
-	router.HandleFunc("/users", h.GetAllUsers).Methods(http.MethodGet)
-	router.HandleFunc("/users/search", h.SearchUsers).Methods(http.MethodGet)
-	router.HandleFunc("/users/{acct}", h.getUserDetails).Methods(http.MethodGet)
-	router.HandleFunc("/users/{acct}", h.deleteUser).Methods(http.MethodDelete)
-	router.HandleFunc("/users/{acct}", h.updateUser).Methods(http.MethodPatch)
-	router.HandleFunc("/users/{acct}/fullname", h.updateUserFullname).Methods(http.MethodPut)
+func (h *userHandler) RegisterUserRoutes(router *mux.Router) {
 	router.HandleFunc("/signup", h.signUp).Methods(http.MethodPost)
 	router.HandleFunc("/signin", h.signIn).Methods(http.MethodPost)
+
+	protectedRouter := router.PathPrefix("/users").Subrouter()
+	protectedRouter.Use(JWTAuthenticationMiddleware)
+	protectedRouter.HandleFunc("", h.GetAllUsers).Methods(http.MethodGet)
+	protectedRouter.HandleFunc("/search", h.SearchUsers).Methods(http.MethodGet)
+	protectedRouter.HandleFunc("/{acct}", h.getUserDetails).Methods(http.MethodGet)
+	protectedRouter.HandleFunc("/{acct}", h.deleteUser).Methods(http.MethodDelete)
+	protectedRouter.HandleFunc("/{acct}", h.updateUser).Methods(http.MethodPatch)
+	protectedRouter.HandleFunc("/{acct}/fullname", h.updateUserFullname).Methods(http.MethodPut)
+
 }

@@ -14,6 +14,7 @@ type UserRepository interface {
 	SearchByFullname(fullname string) ([]entity.User, error)
 	GetByAcct(acct string) (*entity.User, error)
 	Create(user *entity.User) (*entity.User, error)
+	Delete(acct string) error
 }
 
 type UserRepositoryImpl struct {
@@ -61,4 +62,8 @@ func (r *UserRepositoryImpl) Create(user *entity.User) (*entity.User, error) {
 		return nil, err
 	}
 	return user, nil
+}
+
+func (r *UserRepositoryImpl) Delete(acct string) error {
+	return r.db.Delete(&entity.User{}, "acct = ?", acct).Error
 }

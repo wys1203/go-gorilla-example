@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 
 	"github.com/golang-jwt/jwt"
+
 	"github.com/wys1203/go-gorilla-example/users/entity"
 	"github.com/wys1203/go-gorilla-example/users/repository"
 )
@@ -17,6 +18,7 @@ type UserUsecase interface {
 	GetUserByAcct(acct string) (*entity.User, error)
 	CreateUser(user *entity.User) (*entity.User, error)
 	Login(acct, pwd string) (string, error)
+	Delete(acct string) error
 }
 
 type UserUsecaseImpl struct {
@@ -79,4 +81,8 @@ func (u *UserUsecaseImpl) Login(acct, pwd string) (string, error) {
 	}
 
 	return signedToken, nil
+}
+
+func (u *UserUsecaseImpl) Delete(acct string) error {
+	return u.userRepo.Delete(acct)
 }

@@ -99,10 +99,24 @@ func (h *userHandler) signIn(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+func (h *userHandler) deleteUser(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	acct := vars["acct"]
+
+	err := h.userUsecase.Delete(acct)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
 func RegisterUserRoutes(router *mux.Router, h *userHandler) {
 	router.HandleFunc("/users", h.GetAllUsers).Methods(http.MethodGet)
 	router.HandleFunc("/users/search", h.SearchUsers).Methods(http.MethodGet)
 	router.HandleFunc("/users/{acct}", h.getUserDetails).Methods(http.MethodGet)
+	router.HandleFunc("/users/{acct}", h.deleteUser).Methods(http.MethodDelete)
 	router.HandleFunc("/signup", h.signUp).Methods(http.MethodPost)
 	router.HandleFunc("/signin", h.signIn).Methods(http.MethodPost)
 }

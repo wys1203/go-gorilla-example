@@ -58,6 +58,28 @@ PATCH /users/{acct}: Update a specific user by Account. (JWT Auth need)
 PUT /users/{acct}/fullname: Update a specific user fullname by Account. (JWT Auth need)
 ```
 
+## Enable security
+
+- Enable HTTPS
+- CSRF
+- XSS
+
+### Enable HTTPS
+
+To enable HTTPS, you need create a self-signed certificate using the openssl command.
+
+```
+openssl req -x509 -newkey rsa:4096 -keyout key.pem -out cert.pem -days 365 -nodes
+```
+
+Please use command-line tools such as curl may require the -k or --insecure flag to allow connections to a server using a self-signed certificate.
+
+### CSRF
+
+```
+go get -u github.com/gorilla/csrf
+```
+
 ## License
 
 This project is licensed under the MIT License. For more information

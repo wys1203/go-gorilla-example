@@ -261,6 +261,7 @@ func (h *userHandler) broadcastFailedSignIn(acct string) {
 }
 
 func (h *userHandler) RegisterUserRoutes(router *mux.Router) {
+	router.Use(setCSPHeader)
 	router.HandleFunc("/signup", h.signUp).Methods(http.MethodPost)
 	router.HandleFunc("/signin", h.signIn).Methods(http.MethodPost)
 	router.HandleFunc("/ws", h.wsHandler).Methods(http.MethodGet)

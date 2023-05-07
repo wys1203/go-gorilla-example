@@ -2,12 +2,14 @@ package main
 
 import (
 	"context"
+	"crypto/rand"
 	"log"
 	"net/http"
 	"os"
 	"os/signal"
 	"time"
 
+	"github.com/gorilla/csrf"
 	"github.com/gorilla/mux"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -42,9 +44,17 @@ func main() {
 	router := mux.NewRouter()
 	userHandler.RegisterUserRoutes(router)
 
+	// Generate a random 32-byte CSRF key
+	csrfKey := make([]byte, 32)
+	if _, err := rand.Read(csrfKey); err != nil {
+		log.Fatal("Failed to generate CSRF key:", err)
+	}
+
+	CSRF := csrf.Protect(csrfKey, csrf.Secure(false))
+
 	server := &http.Server{
-		Addr:         ":8080",
-		Handler:      router,
+		Addr:         ":8443",
+		Handler:      CSRF(router),
 		ReadTimeout:  10 * time.Second,
 		WriteTimeout: 10 * time.Second,
 	}
@@ -55,8 +65,8 @@ func main() {
 
 	// Run the server in a goroutine
 	go func() {
-		log.Println("Starting server on :8080")
-		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		log.Println("Starting server on :8443")
+		if err := server.ListenAndServeTLS("cert.pem", "key.pem"); err != nil && err != http.ErrServerClosed {
 			log.Fatalf("Failed to start server: %v", err)
 		}
 	}()

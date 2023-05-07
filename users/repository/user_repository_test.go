@@ -51,11 +51,11 @@ func (suite *RepositorySuite) TestGetAll() {
 	rows.AddRow("acctid-1", "password1", "User One", createdAt, updatedAt).
 		AddRow("acctid-2", "password2", "User Two", createdAt, updatedAt)
 
-	suite.mock.ExpectQuery("^SELECT (.+) FROM \"users\"$").WillReturnRows(rows)
+	suite.mock.ExpectQuery("^SELECT (.+) FROM \"users\" ORDER BY created_at asc LIMIT 10$").WillReturnRows(rows)
 
 	userRepo := repository.NewUserRepository(suite.DB)
 
-	users, err := userRepo.GetAll()
+	users, err := userRepo.GetAll(0, 0, "", "")
 	assert.NoError(suite.T(), err)
 
 	expectedUsers := []entity.User{

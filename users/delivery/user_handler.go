@@ -3,6 +3,7 @@ package delivery
 import (
 	"encoding/json"
 	"net/http"
+	"strconv"
 
 	"github.com/gorilla/mux"
 
@@ -19,7 +20,11 @@ func NewUserHandler(userUsecase usecase.UserUsecase) *userHandler {
 }
 
 func (h *userHandler) GetAllUsers(w http.ResponseWriter, r *http.Request) {
-	users, err := h.userUsecase.GetAllUsers()
+	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
+	size, _ := strconv.Atoi(r.URL.Query().Get("size"))
+	sortBy := r.URL.Query().Get("sortBy")
+	order := r.URL.Query().Get("order")
+	users, err := h.userUsecase.GetAll(page, size, sortBy, order)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

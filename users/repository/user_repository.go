@@ -10,7 +10,7 @@ import (
 )
 
 type UserRepository interface {
-	GetAll() ([]entity.User, error)
+	GetAll(page int, size int, sortBy string, order string) ([]entity.User, error)
 	SearchByFullname(fullname string) ([]entity.User, error)
 	GetByAcct(acct string) (*entity.User, error)
 	Create(user *entity.User) (*entity.User, error)
@@ -26,9 +26,30 @@ func NewUserRepository(db *gorm.DB) UserRepository {
 	return &UserRepositoryImpl{db: db}
 }
 
-func (r *UserRepositoryImpl) GetAll() ([]entity.User, error) {
+func (r *UserRepositoryImpl) GetAll(page int, size int, sortBy string, order string) ([]entity.User, error) {
+	if sortBy == "" {
+		sortBy = "created_at"
+	}
+
+	if order == "" {
+		order = "asc"
+	}
+
+	if page <= 0 {
+		page = 1
+	}
+
+	switch {
+	case size > 100:
+		size = 100
+	case size <= 0:
+		size = 10
+	}
+
+	offset := (page - 1) * size
+
 	var users []entity.User
-	err := r.db.Find(&users).Error
+	err := r.db.Offset(offset).Limit(size).Order(fmt.Sprintf("%s %s", sortBy, order)).Find(&users).Error
 	return users, err
 }
 

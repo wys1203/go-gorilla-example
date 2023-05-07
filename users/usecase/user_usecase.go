@@ -13,7 +13,7 @@ import (
 )
 
 type UserUsecase interface {
-	GetAllUsers() ([]entity.User, error)
+	GetAll(page int, size int, sortBy string, order string) ([]entity.User, error)
 	SearchUsers(fullname string) ([]entity.User, error)
 	GetUserByAcct(acct string) (*entity.User, error)
 	CreateUser(user *entity.User) (*entity.User, error)
@@ -30,12 +30,8 @@ func NewUserUsecase(userRepo repository.UserRepository) UserUsecase {
 	return &UserUsecaseImpl{userRepo: userRepo}
 }
 
-func (u *UserUsecaseImpl) GetAllUsers() ([]entity.User, error) {
-	users, err := u.userRepo.GetAll()
-	if err != nil {
-		return nil, err
-	}
-	return users, nil
+func (u *UserUsecaseImpl) GetAll(page int, size int, sortBy string, order string) ([]entity.User, error) {
+	return u.userRepo.GetAll(page, size, sortBy, order)
 }
 
 func (u *UserUsecaseImpl) SearchUsers(fullname string) ([]entity.User, error) {

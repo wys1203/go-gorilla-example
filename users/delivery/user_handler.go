@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"sync"
 
+	"github.com/gorilla/csrf"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/websocket"
 
@@ -89,51 +90,60 @@ func (h *userHandler) getUserDetails(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *userHandler) signUp(w http.ResponseWriter, r *http.Request) {
-	var user entity.User
-	if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
-		errors.JSONHandleError(w, errors.NewErrorWrapper(http.StatusBadRequest, err, err.Error()))
-		return
+	if r.Method == http.MethodPost {
+		var user entity.User
+		if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
+			errors.JSONHandleError(w, errors.NewErrorWrapper(http.StatusBadRequest, err, err.Error()))
+			return
+		}
+
+		// TODO: validate user data
+		// ...
+
+		createdUser, err := h.userUsecase.CreateUser(&user)
+		if err != nil {
+			errors.JSONHandleError(
+				w,
+				errors.NewErrorWrapper(http.StatusInternalServerError, err, err.Error()),
+			)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusCreated)
+		json.NewEncoder(w).Encode(createdUser)
+	} else {
+		w.Header().Set("X-CSRF-Token", csrf.Token(r))
 	}
 
-	// TODO: validate user data
-	// ...
-
-	createdUser, err := h.userUsecase.CreateUser(&user)
-	if err != nil {
-		errors.JSONHandleError(
-			w,
-			errors.NewErrorWrapper(http.StatusInternalServerError, err, err.Error()),
-		)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(createdUser)
 }
 
 func (h *userHandler) signIn(w http.ResponseWriter, r *http.Request) {
-	var creds struct {
-		Acct string `json:"acct"`
-		Pwd  string `json:"pwd"`
-	}
+	if r.Method == http.MethodPost {
+		var creds struct {
+			Acct string `json:"acct"`
+			Pwd  string `json:"pwd"`
+		}
 
-	if err := json.NewDecoder(r.Body).Decode(&creds); err != nil {
-		errors.JSONHandleError(w, errors.NewErrorWrapper(http.StatusBadRequest, err, err.Error()))
-		return
-	}
+		if err := json.NewDecoder(r.Body).Decode(&creds); err != nil {
+			errors.JSONHandleError(w, errors.NewErrorWrapper(http.StatusBadRequest, err, err.Error()))
+			return
+		}
 
-	token, err := h.userUsecase.Login(creds.Acct, creds.Pwd)
-	if err != nil {
-		h.broadcastFailedSignIn(creds.Acct)
-		errors.JSONHandleError(w, errors.NewErrorWrapper(http.StatusUnauthorized, err, err.Error()))
-		return
-	}
+		token, err := h.userUsecase.Login(creds.Acct, creds.Pwd)
+		if err != nil {
+			h.broadcastFailedSignIn(creds.Acct)
+			errors.JSONHandleError(w, errors.NewErrorWrapper(http.StatusUnauthorized, err, err.Error()))
+			return
+		}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{
-		"token": token,
-	})
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]string{
+			"token": token,
+		})
+	} else {
+		w.Header().Set("X-CSRF-Token", csrf.Token(r))
+	}
 }
 
 func (h *userHandler) deleteUser(w http.ResponseWriter, r *http.Request) {
@@ -262,8 +272,9 @@ func (h *userHandler) broadcastFailedSignIn(acct string) {
 
 func (h *userHandler) RegisterUserRoutes(router *mux.Router) {
 	router.Use(setCSPHeader)
-	router.HandleFunc("/signup", h.signUp).Methods(http.MethodPost)
-	router.HandleFunc("/signin", h.signIn).Methods(http.MethodPost)
+
+	router.HandleFunc("/signup", h.signUp)
+	router.HandleFunc("/signin", h.signIn)
 	router.HandleFunc("/ws", h.wsHandler).Methods(http.MethodGet)
 
 	protectedRouter := router.PathPrefix("/users").Subrouter()

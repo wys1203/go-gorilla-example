@@ -1,0 +1,88 @@
+package main
+
+import (
+	"context"
+	"crypto/rand"
+	"log"
+	"net/http"
+	"os"
+	"os/signal"
+	"time"
+
+	"github.com/gorilla/csrf"
+	"github.com/gorilla/mux"
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
+
+	"github.com/wys1203/go-gorilla-example/users/delivery"
+	"github.com/wys1203/go-gorilla-example/users/entity"
+	"github.com/wys1203/go-gorilla-example/users/repository"
+	"github.com/wys1203/go-gorilla-example/users/usecase"
+)
+
+func main() {
+	// Get db config from environment variables
+	host := os.Getenv("DB_HOST")
+	port := os.Getenv("DB_PORT")
+	user := os.Getenv("DB_USER")
+	password := os.Getenv("DB_PASSWORD")
+	dbname := os.Getenv("DB_NAME")
+
+	dsn := "host=" + host + " user=" + user + " password=" + password + " dbname=" + dbname + " port=" + port + " sslmode=disable TimeZone=UTC"
+	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
+	if err != nil {
+		log.Fatalf("Failed to connect to the database: %v", err)
+	}
+
+	// Migrate the schema
+	db.AutoMigrate(&entity.User{})
+
+	userRepo := repository.NewUserRepository(db)
+	userUsecase := usecase.NewUserUsecase(userRepo)
+	userHandler := delivery.NewUserHandler(userUsecase)
+
+	router := mux.NewRouter()
+	userHandler.RegisterUserRoutes(router)
+
+	// Generate a random 32-byte CSRF key
+	csrfKey := make([]byte, 32)
+	if _, err := rand.Read(csrfKey); err != nil {
+		log.Fatal("Failed to generate CSRF key:", err)
+	}
+
+	CSRF := csrf.Protect(csrfKey, csrf.Secure(false))
+
+	server := &http.Server{
+		Addr:         ":8443",
+		Handler:      CSRF(router),
+		ReadTimeout:  10 * time.Second,
+		WriteTimeout: 10 * time.Second,
+	}
+
+	// Channel to listen for OS signals
+	stopChan := make(chan os.Signal, 1)
+	signal.Notify(stopChan, os.Interrupt)
+
+	// Run the server in a goroutine
+	go func() {
+		log.Println("Starting server on :8443")
+		if err := server.ListenAndServeTLS("cert.pem", "key.pem"); err != nil && err != http.ErrServerClosed {
+			log.Fatalf("Failed to start server: %v", err)
+		}
+	}()
+
+	// Block until an OS signal is received
+	<-stopChan
+	log.Println("Shutting down the server...")
+
+	// Create a context with a timeout for the shutdown process
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	// Shutdown the server gracefully
+	if err := server.Shutdown(ctx); err != nil {
+		log.Fatalf("Server forced to shutdown: %v", err)
+	}
+
+	log.Println("Server gracefully stopped")
+}
